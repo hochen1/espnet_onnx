@@ -1,9 +1,11 @@
 from typing import List
 
 import onnxruntime
+from espnet_onnx.asr.npu_model_adapter import build_joint_network_npu_model
 
 
 class JointNetwork:
+    @build_joint_network_npu_model
     def __init__(
         self,
         config,

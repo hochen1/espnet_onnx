@@ -13,9 +13,11 @@ from espnet_onnx.utils.function import (
     mask_fill
 )
 from espnet_onnx.utils.config import Config
+from espnet_onnx.asr.npu_model_adapter import build_encoder_npu_model, encoder_npu_call
 
 
 class Encoder:
+    @build_encoder_npu_model
     def __init__(
         self,
         encoder_config: Config,
@@ -49,6 +51,7 @@ class Encoder:
         # if self.config.do_postencoder:
         #     self.postencoder = Postencoder(self.config.postencoder)
 
+    @encoder_npu_call
     def __call__(
         self, speech: np.ndarray, speech_length: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray]:

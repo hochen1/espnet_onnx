@@ -180,11 +180,13 @@ class ASRModelExport:
         tag_name: str,
         quantize: bool = False,
         optimize: bool = False,
+        **kwargs
     ):
         assert check_argument_types()
         cache_dir = Path(path).parent
         d = ModelDownloader(cache_dir)
         model_config = d.unpack_local_file(path)
+        model_config.update(**kwargs)
         model = Speech2Text(**model_config)
         self.export(model, tag_name, quantize, optimize)
     
@@ -226,7 +228,7 @@ class ASRModelExport:
             dummy_input,
             os.path.join(path, f'{model.model_name}.onnx'),
             verbose=verbose,
-            opset_version=15,
+            opset_version=11,
             input_names=model.get_input_names(),
             output_names=model.get_output_names(),
             dynamic_axes=model.get_dynamic_axes()

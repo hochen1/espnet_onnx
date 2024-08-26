@@ -8,9 +8,11 @@ import onnxruntime
 from scipy.special import log_softmax
 
 from espnet_onnx.asr.scorer.interface import BatchScorerInterface
+from espnet_onnx.asr.npu_model_adapter import build_transformer_lm_npu_model
 
 
 class TransformerLM(BatchScorerInterface):
+    @build_transformer_lm_npu_model
     def __init__(
         self,
         config,
@@ -98,7 +100,7 @@ class TransformerLM(BatchScorerInterface):
         is_first_iteration = False
         if states[0] is None:
             batch_state = [
-                np.zeros((1, 1, self.odim), dtype=np.float32)
+                np.zeros((n_batch, 1, self.odim), dtype=np.float32)
                 for _ in range(self.nlayers)
             ]
             is_first_iteration = True

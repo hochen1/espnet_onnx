@@ -53,6 +53,17 @@ def normalize(input: torch.Tensor, p: float = 2.0, dim: int = 1, out: Optional[t
         denom = input.norm(p, dim, keepdim=True).expand_as(input)
         return torch.div(input, denom, out=out)
 
+def tril_onnx(x, diagonal=0):
+    m = x.shape[0]
+    n = x.shape[1]
+    arange = torch.arange(n, device=x.device)
+    mask = arange.expand(m, n)
+    mask_maker = torch.arange(m, device=x.device).unsqueeze(-1)
+    if diagonal:
+        mask_maker = mask_maker + diagonal
+    mask = mask <= mask_maker
+    return mask * x
 
 def subsequent_mask(size: torch.Tensor):
-    return torch.ones(size, size).tril()
+    #return torch.ones(size, size).tril()
+    return tril_onnx(torch.ones(size, size))

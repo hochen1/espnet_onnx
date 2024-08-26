@@ -11,9 +11,11 @@ import onnxruntime
 
 from espnet_onnx.asr.scorer.interface import BatchScorerInterface
 from espnet_onnx.utils.config import Config
+from espnet_onnx.asr.npu_model_adapter import build_decoder_npu_model
 
 
 class XformerDecoder(BatchScorerInterface):
+    @build_decoder_npu_model
     def __init__(
         self,
         config: Config,
@@ -65,7 +67,7 @@ class XformerDecoder(BatchScorerInterface):
         n_batch = len(ys)
         if states[0] is None:
             batch_state = [
-                np.zeros((1, 1, self.odim), dtype=np.float32)
+                np.zeros((n_batch, 1, self.odim), dtype=np.float32)
                 for _ in range(self.n_layers)
             ]
         else:

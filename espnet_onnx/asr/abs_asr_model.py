@@ -11,6 +11,7 @@ from espnet_onnx.asr.scorer.length_bonus import LengthBonus
 from espnet_onnx.asr.scorer.interface import BatchScorerInterface
 from espnet_onnx.asr.beam_search.beam_search import BeamSearch
 from espnet_onnx.asr.beam_search.batch_beam_search import BatchBeamSearch
+from espnet_onnx.asr.beam_search.multi_batch_beam_search import MultiBatchBeamSearch
 from espnet_onnx.asr.beam_search.beam_search_transducer import BeamSearchTransducer
 
 
@@ -41,8 +42,12 @@ class AbsASRModel(AbsModel):
                 if not isinstance(v, BatchScorerInterface)
             ]
             if len(non_batch) == 0:
-                self.beam_search.__class__ = BatchBeamSearch
-                logging.info("BatchBeamSearch implementation is selected.")
+                if self.providers[0] == 'NPUExecutionProvider' and self.enable_multibatch:
+                    self.beam_search.__class__ = MultiBatchBeamSearch
+                    logging.info("MultiBatchBeamSearch implementation is selected.")
+                else:
+                    self.beam_search.__class__ = BatchBeamSearch
+                    logging.info("BatchBeamSearch implementation is selected.")
             else:
                 logging.warning(
                     f"As non-batch scorers {non_batch} are found, "

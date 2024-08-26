@@ -102,6 +102,7 @@ class BatchBeamSearch(BeamSearch):
         Returns:
             Hypothesis: The initial hypothesis.
         """
+        batch_num = x.shape[0]
         init_states = dict()
         init_scores = dict()
         for k, d in self.scorers.items():
@@ -115,7 +116,7 @@ class BatchBeamSearch(BeamSearch):
                     states=init_states,
                     yseq=np.array([self.sos], dtype=np.int64),
                 )
-            ]
+            ] * batch_num
         )
 
     def score_full(
@@ -139,7 +140,7 @@ class BatchBeamSearch(BeamSearch):
         return scores, states
 
     def score_partial(
-        self, hyp: BatchHypothesis, ids: np.ndarray, x: np.ndarray
+        self, hyp: BatchHypothesis, ids: np.ndarray, x: np.ndarray, **kwargs
     ) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
         """Score new hypothesis by `self.full_scorers`.
         Args:
@@ -157,7 +158,7 @@ class BatchBeamSearch(BeamSearch):
         states = dict()
         for k, d in self.part_scorers.items():
             scores[k], states[k] = d.batch_score_partial(
-                hyp.yseq, ids, hyp.states[k], x
+                hyp.yseq, ids, hyp.states[k], x, **kwargs
             )
         return scores, states
 
@@ -257,6 +258,7 @@ class BatchBeamSearch(BeamSearch):
         maxlen: int,
         running_hyps: BatchHypothesis,
         ended_hyps: List[Hypothesis],
+        keep_ori_hyps: bool = False
     ) -> BatchHypothesis:
         """Perform post-processing of beam search iterations.
         Args:
@@ -308,4 +310,6 @@ class BatchBeamSearch(BeamSearch):
             hyp = self._select(running_hyps, b)
             ended_hyps.append(hyp)
         remained_ids = np.transpose(np.nonzero(is_eos == 0)).reshape(-1)
+        if keep_ori_hyps:
+            return self._batch_select(running_hyps, remained_ids), running_hyps
         return self._batch_select(running_hyps, remained_ids)

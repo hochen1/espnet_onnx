@@ -10,13 +10,16 @@ import numpy as np
 
 from espnet_onnx.asr.abs_asr_model import AbsASRModel
 from espnet_onnx.asr.beam_search.hyps import Hypothesis
+from espnet_onnx.asr.asr_npu_adapter import speech_npu_adapt, init_speech_npu, speech_npu_call
 
 
+@speech_npu_adapt
 class Speech2Text(AbsASRModel):
     """Wrapper class for espnet2.asr.bin.asr_infer.Speech2Text
 
     """
 
+    @init_speech_npu
     def __init__(self,
                  tag_name: str = None,
                  model_dir: Union[Path, str] = None,
@@ -45,7 +48,7 @@ class Speech2Text(AbsASRModel):
             self.start_idx = 1
             self.last_idx = -1
 
-
+    @speech_npu_call
     def __call__(self, speech: np.ndarray) -> List[
         Tuple[
             Optional[str],
@@ -79,6 +82,7 @@ class Speech2Text(AbsASRModel):
 
         nbest_hyps = self.beam_search(enc[0])[:1]
 
+    def _post_process(self, nbest_hyps):
         results = []
         for hyp in nbest_hyps:
             # remove sos/eos and get results

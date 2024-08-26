@@ -10,6 +10,7 @@ from scipy.special import (
 
 from espnet_onnx.utils.config import Config
 from .interface import BatchPartialScorerInterface
+from espnet_onnx.asr.npu_model_adapter import ctcprefixscorer_npu_init, ctcprefixscoreth_npu_init, ctcprefixscoreth_npu_call
 
 
 class CTCPrefixScore:
@@ -104,7 +105,7 @@ class CTCPrefixScore:
 
 class CTCPrefixScorer(BatchPartialScorerInterface):
     """Decoder interface wrapper for CTCPrefixScore."""
-
+    @ctcprefixscorer_npu_init
     def __init__(self, ctc: Config, eos: int, providers: List[str], use_quantized: bool = False):
         """Initialize class.
         Args:
@@ -190,7 +191,14 @@ class CTCPrefixScorer(BatchPartialScorerInterface):
         self.impl = CTCPrefixScoreTH(logp, xlen, 0, self.eos)
         return None
 
-    def batch_score_partial(self, y, ids, state, x):
+    def multi_batch_init_state(self, x: np.ndarray):
+        logp = self.ctc.run(["ctc_out"], {"x": x})[0]
+        xlen = np.sum((x[:, :, 0] != 0), axis=-1)
+        xlen = np.expand_dims(xlen, axis=-1)
+        self.impl = CTCPrefixScoreTH(logp, np.squeeze(xlen, axis=-1), 0, self.eos, multi_batch=True)
+        return None
+
+    def batch_score_partial(self, y, ids, state, x, **kwargs):
         """Score new token.
         Args:
             y (np.ndarray): 1D prefix token
@@ -211,7 +219,7 @@ class CTCPrefixScorer(BatchPartialScorerInterface):
             )
         else:
             batch_state = None
-        return self.impl(y, batch_state, ids)
+        return self.impl(y, batch_state, ids, **kwargs)
     
     def extend_prob(self, x: np.ndarray):
         """Extend probs for decoding.
@@ -255,7 +263,7 @@ class CTCPrefixScoreTH:
     See also Seki et al. "Vectorized Beam Search for CTC-Attention-Based
     Speech Recognition," In INTERSPEECH (pp. 3825-3829), 2019.
     """
-
+    @ctcprefixscoreth_npu_init
     def __init__(self, x: np.ndarray, xlens: np.ndarray, blank: int, eos: int, margin: int = 0):
         """Construct CTC prefix scorer
         :param np.ndarray x: input label posterior sequences (B, T, O)
@@ -299,6 +307,7 @@ class CTCPrefixScoreTH:
         self.idx_b = np.arange(self.batch)
         self.idx_bo = (self.idx_b * self.odim)[:, None]
 
+    @ctcprefixscoreth_npu_call
     def __call__(self, y, state, scoring_ids=None, att_w=None):
         """Compute CTC prefix scores for next labels
         :param list y: prefix label sequences
